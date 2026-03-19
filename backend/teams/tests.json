@@ -1,0 +1,10 @@
+{
+  "tests": [
+    {
+      "name": "Get teams without event_id returns 400",
+      "method": "GET",
+      "path": "/",
+      "expectedStatus": 400
+    }
+  ]
+}

@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import Icon from "@/components/ui/icon";
+import { useAuthStore } from "@/store/authStore";
+import AuthModal from "@/components/AuthModal";
 
 const navItems = [
   { path: "/", label: "Главная", icon: "Home" },
@@ -13,6 +15,8 @@ const navItems = [
 export default function Layout({ children }: { children: React.ReactNode }) {
   const location = useLocation();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [authOpen, setAuthOpen] = useState(false);
+  const { user, logout } = useAuthStore();
 
   const isAdmin = location.pathname.startsWith("/admin");
 
@@ -56,15 +60,57 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             >
               Админ
             </Link>
+
+            {/* Auth button */}
+            {user ? (
+              <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-secondary">
+                  {user.avatar_url ? (
+                    <img src={user.avatar_url} className="w-5 h-5 rounded-full" />
+                  ) : (
+                    <div className="w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold text-white" style={{ background: "var(--accent-blue)" }}>
+                      {user.display_name.charAt(0).toUpperCase()}
+                    </div>
+                  )}
+                  <span className="text-sm font-medium max-w-[100px] truncate">{user.display_name}</span>
+                </div>
+                <button
+                  onClick={logout}
+                  className="p-1.5 rounded-lg hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
+                  title="Выйти"
+                >
+                  <Icon name="LogOut" size={15} />
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => setAuthOpen(true)}
+                className="text-sm font-bold px-4 py-1.5 rounded-lg text-white transition-opacity hover:opacity-90"
+                style={{ background: "var(--accent-blue)" }}
+              >
+                Войти
+              </button>
+            )}
           </nav>
 
-          {/* Mobile burger */}
-          <button
-            className="md:hidden p-2 rounded-lg hover:bg-secondary transition-colors"
-            onClick={() => setMenuOpen(!menuOpen)}
-          >
-            <Icon name={menuOpen ? "X" : "Menu"} size={20} />
-          </button>
+          {/* Mobile right */}
+          <div className="md:hidden flex items-center gap-2">
+            {!user && (
+              <button
+                onClick={() => setAuthOpen(true)}
+                className="text-xs font-bold px-3 py-1.5 rounded-lg text-white"
+                style={{ background: "var(--accent-blue)" }}
+              >
+                Войти
+              </button>
+            )}
+            <button
+              className="p-2 rounded-lg hover:bg-secondary transition-colors"
+              onClick={() => setMenuOpen(!menuOpen)}
+            >
+              <Icon name={menuOpen ? "X" : "Menu"} size={20} />
+            </button>
+          </div>
         </div>
 
         {/* Mobile menu */}
@@ -98,6 +144,15 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                 <Icon name="ShieldCheck" size={16} />
                 Админ-панель
               </Link>
+              {user && (
+                <div className="mt-2 pt-2 border-t border-border flex items-center justify-between px-3">
+                  <span className="text-sm font-medium truncate">{user.display_name}</span>
+                  <button onClick={logout} className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1">
+                    <Icon name="LogOut" size={13} />
+                    Выйти
+                  </button>
+                </div>
+              )}
             </nav>
           </div>
         )}
@@ -115,6 +170,8 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           <span className="text-xs text-muted-foreground">Система регистрации команд</span>
         </div>
       </footer>
+
+      {authOpen && <AuthModal onClose={() => setAuthOpen(false)} />}
     </div>
   );
 }

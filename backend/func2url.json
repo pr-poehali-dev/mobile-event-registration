@@ -1,0 +1,6 @@
+{
+  "teams": "https://functions.poehali.dev/e90344a2-b93b-43fc-ab0e-c04a2b017a83",
+  "payment": "https://functions.poehali.dev/487f9128-e542-4ab9-aeb6-5e1750b88fc8",
+  "events": "https://functions.poehali.dev/bccb7ea1-3674-4c8c-8e3b-c8aec7f13742",
+  "auth": "https://functions.poehali.dev/92f857f3-f2d7-4eff-92ff-03498afc448a"
+}
