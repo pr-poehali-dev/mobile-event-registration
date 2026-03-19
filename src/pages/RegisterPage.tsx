@@ -23,6 +23,8 @@ export default function RegisterPage() {
   const [error, setError] = useState("");
   const [registrationToken, setRegistrationToken] = useState("");
   const [registeredTeam, setRegisteredTeam] = useState<{ teamName: string; slots: Slot[]; id: string } | null>(null);
+  const [reserveListMode, setReserveListMode] = useState(false);
+  const [reserveListText, setReserveListText] = useState("");
 
   const [form, setForm] = useState<FormData>({
     eventId: searchParams.get("event") || "",
@@ -84,11 +86,30 @@ export default function RegisterPage() {
       setForm((f) => ({ ...f, slots }));
       setStep("slots");
     } else if (step === "slots") {
-      for (const slot of form.slots) {
+      // Apply list mode for reserve slot if active
+      let finalSlots = form.slots;
+      if (reserveListMode) {
+        const names = reserveListText
+          .split(/[\n,]+/)
+          .map((s) => s.trim())
+          .filter(Boolean)
+          .slice(0, 4);
+        if (names.length === 0) return setError("Введите хотя бы одного запасного участника");
+        finalSlots = form.slots.map((slot) => {
+          if (!slot.isReserve) return slot;
+          const participants = Array(4).fill({ name: "" }).map((_, i) => ({ name: names[i] || "" }));
+          return { ...slot, participants };
+        });
+        setForm((f) => ({ ...f, slots: finalSlots }));
+      }
+      for (const slot of finalSlots) {
         const filled = slot.participants.filter((p) => p.name.trim()).length;
-        if (filled < 3)
+        const minRequired = slot.isReserve ? 1 : 3;
+        if (filled < minRequired)
           return setError(
-            `Слот №${slot.slotNumber}${slot.isReserve ? " (запасные)" : ""}: нужно заполнить минимум 3 участника из 4`
+            slot.isReserve
+              ? `Запасной слот: введите хотя бы одного участника`
+              : `Слот №${slot.slotNumber}: нужно заполнить минимум 3 участника из 4`
           );
       }
       handleSubmit();
@@ -466,32 +487,94 @@ export default function RegisterPage() {
                 >
                   {slot.isReserve ? "Запасной слот" : `Слот ${slot.slotNumber}`}
                 </span>
-                <span className="text-xs text-muted-foreground ml-auto">
-                  {slot.isReserve ? "до 4 человек" : "4 участника / мин. 3"}
-                </span>
-              </div>
-              <div className="p-3 grid grid-cols-1 gap-2">
-                {slot.participants.map((p, partIdx) => (
-                  <div key={partIdx} className="flex items-center gap-2">
-                    <span className="text-xs text-muted-foreground w-5 text-right shrink-0">
-                      {partIdx + 1}.
-                    </span>
-                    <input
-                      type="text"
-                      placeholder={
-                        slot.isReserve
-                          ? `Запасной ${partIdx + 1}`
-                          : `Участник ${partIdx + 1}${partIdx < 3 ? " *" : ""}`
-                      }
-                      value={p.name}
-                      onChange={(e) =>
-                        updateParticipant(slotIdx, partIdx, e.target.value)
-                      }
-                      className="flex-1 px-3 py-2 rounded-lg border border-border focus:outline-none focus:border-blue-500 text-sm"
-                    />
+                {slot.isReserve ? (
+                  <div className="ml-auto flex items-center gap-1 rounded-lg overflow-hidden border border-orange-200">
+                    <button
+                      type="button"
+                      onClick={() => setReserveListMode(false)}
+                      className="px-2 py-1 text-xs transition-colors"
+                      style={{
+                        background: !reserveListMode ? "#FED7AA" : "transparent",
+                        color: "#C2410C",
+                        fontWeight: !reserveListMode ? 700 : 400,
+                      }}
+                    >
+                      По одному
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setReserveListMode(true)}
+                      className="px-2 py-1 text-xs transition-colors"
+                      style={{
+                        background: reserveListMode ? "#FED7AA" : "transparent",
+                        color: "#C2410C",
+                        fontWeight: reserveListMode ? 700 : 400,
+                      }}
+                    >
+                      Списком
+                    </button>
                   </div>
-                ))}
+                ) : (
+                  <span className="text-xs text-muted-foreground ml-auto">
+                    4 участника / мин. 3
+                  </span>
+                )}
               </div>
+              {slot.isReserve && reserveListMode ? (
+                <div className="p-3 space-y-2">
+                  <textarea
+                    placeholder={"Иванов Иван\nПетров Пётр\nСидоров Сидор"}
+                    value={reserveListText}
+                    onChange={(e) => setReserveListText(e.target.value)}
+                    rows={4}
+                    className="w-full px-3 py-2 rounded-lg border border-border focus:outline-none focus:border-orange-400 text-sm resize-none"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Каждый участник с новой строки или через запятую · максимум 4
+                  </p>
+                  {reserveListText && (
+                    <div className="flex flex-wrap gap-1.5 pt-1">
+                      {reserveListText
+                        .split(/[\n,]+/)
+                        .map((s) => s.trim())
+                        .filter(Boolean)
+                        .slice(0, 4)
+                        .map((name, i) => (
+                          <span
+                            key={i}
+                            className="px-2 py-0.5 rounded-full text-xs font-medium"
+                            style={{ background: "#FED7AA", color: "#C2410C" }}
+                          >
+                            {name}
+                          </span>
+                        ))}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="p-3 grid grid-cols-1 gap-2">
+                  {slot.participants.map((p, partIdx) => (
+                    <div key={partIdx} className="flex items-center gap-2">
+                      <span className="text-xs text-muted-foreground w-5 text-right shrink-0">
+                        {partIdx + 1}.
+                      </span>
+                      <input
+                        type="text"
+                        placeholder={
+                          slot.isReserve
+                            ? `Запасной ${partIdx + 1}`
+                            : `Участник ${partIdx + 1}${partIdx < 3 ? " *" : ""}`
+                        }
+                        value={p.name}
+                        onChange={(e) =>
+                          updateParticipant(slotIdx, partIdx, e.target.value)
+                        }
+                        className="flex-1 px-3 py-2 rounded-lg border border-border focus:outline-none focus:border-blue-500 text-sm"
+                      />
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           ))}
         </div>
